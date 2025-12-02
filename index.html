@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>全方位英文單字挑戰</title>
+    <style>
+        :root {
+            --primary: #FF9F1C;
+            --secondary: #2EC4B6;
+            --accent: #E71D36;
+            --cute-blue: #4CC9F0;
+            --cute-blue-dark: #3A9BBD;
+            --bg-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --header-height: 50px;
+            --feedback-height: 60px;
+        }
+
+        * { box-sizing: border-box; touch-action: manipulation; }
+        
+        html, body { 
+            margin: 0; padding: 0;
+            width: 100%; height: 100%; 
+            overflow: hidden; 
+            position: fixed; 
+            font-family: var(--font-main); 
+            background: var(--bg-gradient); 
+            user-select: none; 
+        }
+        
+        .hidden { display: none !important; }
+        
+        .screen { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            display: flex; flex-direction: column; align-items: center; 
+            padding: 10px; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
+            padding-top: calc(var(--header-height) + 10px);
+        }
+        
+        #landing, #menu { padding-top: 20px; justify-content: center; padding-bottom: 20px;}
+        #menu { justify-content: flex-start; padding-top: 60px; } 
+
+        button { cursor: pointer; border: none; outline: none; transition: transform 0.1s; font-family: inherit; }
+        button:active { transform: scale(0.95); }
+        
+        .btn-large {
+            padding: 15px 40px; font-size: 1.5rem; border-radius: 50px;
+            background: var(--primary); color: white; box-shadow: var(--shadow);
+            font-weight: bold; margin: 10px;
+        }
+
+        .icon-btn { background: none; font-size: 1.5rem; padding: 10px; }
+
+        /* 3. 設定按鈕優化：縮小、無呼吸、加文字 */
+        #global-setting-btn { 
+            position: fixed; top: 15px; left: 15px; 
+            z-index: 9999; 
+            background: #fff; 
+            border: 2px solid #ddd;
+            border-radius: 30px; /* 膠囊狀 */
+            padding: 5px 15px;
+            font-size: 1rem; 
+            color: #555;
+            font-weight: bold;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            /* 移除 animation */
+        }
+        #global-setting-btn span { font-size: 1.2rem; } /* 圖示大小 */
+
+        #landing { background: linear-gradient(to bottom, #a18cd1 0%, #fbc2eb 100%); text-align: center; padding-top: 0; z-index: 10; }
+        #landing h1 { font-size: 3rem; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); margin-bottom: 20px; }
+        
+        /* 選單 */
+        #menu-container { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 50px; }
+        .section-title { font-size: 1.2rem; color: #555; margin: 10px 0; display: flex; align-items: center; gap: 10px; }
+        .grid-menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; width: 100%; }
+        
+        .mode-card {
+            background: white; border-radius: 15px; padding: 20px; text-align: center;
+            box-shadow: var(--shadow); cursor: pointer; position: relative; border: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .mode-card.completed { border-color: #2ecc71; }
+        .mode-card.completed::after { content: '✓'; position: absolute; top: 5px; right: 5px; color: #2ecc71; font-weight: bold; font-size: 1.2rem; }
+        .mode-card.locked { filter: grayscale(1); opacity: 0.6; pointer-events: none; background: #eee; }
+        .mode-card.unlocked { border-color: var(--primary); background: #fff8e1; }
+        .mode-icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+        .mode-name { font-weight: bold; color: #333; }
+
+        /* Game Header */
+        #game-header {
+            position: fixed; top: 0; left: 0; width: 100%; height: var(--header-height);
+            display: flex; justify-content: space-between; align-items: center; padding: 0 15px;
+            background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 100;
+        }
+        
+        /* Game Content Layout */
+        #game-area {
+            display: flex; flex-direction: column;
+            /* 預留底部空間給回饋訊息，但不預留給 nav-bar (因為已整合) */
+            padding-bottom: var(--feedback-height); 
+        }
+
+        .game-content { 
+            width: 100%; max-width: 600px; margin: 0 auto;
+            flex: 1; display: flex; flex-direction: column; 
+            justify-content: flex-start; align-items: center; 
+            padding-top: 10px;
+            position: relative; /* 給 nav-wrapper 定位參考 */
+        }
+        
+        .question-img { 
+            height: 25vh; width: auto; max-width: 100%;
+            border-radius: 15px; box-shadow: var(--shadow); 
+            object-fit: contain; margin-bottom: 15px;
+        }
+        .img-blur { filter: blur(15px); }
+
+        /* Options Grid */
+        .options-grid { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; 
+            width: 100%; flex: 1; min-height: 200px; max-height: 40vh;
+        }
+        
+        .option-btn {
+            background: white; border: 2px solid #ddd; padding: 5px; border-radius: 10px;
+            font-size: 1.3rem; color: #333; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+        }
+        .option-btn:hover { background: #f9f9f9; }
+        .option-btn img { max-height: 70%; max-width: 80%; object-fit: contain; }
+
+        /* Spelling & Unscramble Styles */
+        .spelling-board {
+            display: flex; flex-direction: column; align-items: center; width: 100%; flex: 1;
+        }
+        .slots-container {
+            display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap;
+            min-height: 60px;
+        }
+        .slot {
+            width: 50px; height: 60px; 
+            border-bottom: 4px solid #ccc; 
+            font-size: 2rem; font-weight: bold; 
+            display: flex; align-items: center; justify-content: center;
+            background: white; border-radius: 5px 5px 0 0;
+            color: #333; z-index: 5;
+        }
+        .slot.filled { border-bottom-color: var(--primary); background: #fff8e1; cursor: pointer;}
+        .slot.static { border-bottom: none; background: transparent; width: auto; } /* 已知字母 */
+        .slot.correct { border-bottom-color: #2ecc71; color: #2ecc71; }
+        
+        /* 2. 字母池改為亂亂的 (Relative container + Absolute items) */
+        .pool-container {
+            position: relative;
+            width: 100%; height: 250px; /* 固定高度讓字母散落 */
+            background: rgba(255,255,255,0.5); border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px dashed #eee;
+        }
+        .pool-letter {
+            position: absolute; /* 絕對定位 */
+            width: 50px; height: 50px; background: white; 
+            border: 3px solid var(--primary); color: var(--primary);
+            font-size: 1.8rem; font-weight: bold; border-radius: 50%; /* 圓形比較可愛 */
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: 2px 2px 5px rgba(0,0,0,0.15);
+            transition: transform 0.2s, opacity 0.2s;
+            z-index: 10;
+        }
+        .pool-letter:active { transform: scale(0.9); }
+        .pool-letter.used { opacity: 0; pointer-events: none; }
+
+        /* Feedback Area */
+        #feedback-msg {
+            position: fixed; bottom: 10px; left: 0; width: 100%;
+            height: var(--feedback-height); 
+            display: flex; justify-content: center; align-items: center;
+            font-size: 2.5rem; font-weight: 900;
+            text-shadow: 2px 2px 0px white;
+            z-index: 200; pointer-events: none;
+        }
+        .msg-correct { color: #2ecc71; animation: pop 0.3s; }
+        .msg-wrong { color: #E71D36; animation: shake 0.5s; }
+
+        /* 1. 導航按鈕優化：整合在區塊內、可愛藍色 */
+        .nav-wrapper {
+            width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: auto; padding: 15px 0;
+        }
+        .nav-btn-cute {
+            background: var(--cute-blue); color: white;
+            border: none; padding: 12px 25px;
+            border-radius: 30px; /* 圓角 */
+            font-size: 1.2rem; font-weight: bold;
+            box-shadow: 0 4px 0 var(--cute-blue-dark); /* 立體陰影 */
+            transition: all 0.1s;
+        }
+        .nav-btn-cute:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 var(--cute-blue-dark);
+        }
+        .nav-btn-cute:disabled {
+            background: #ccc; box-shadow: none; color: #888; cursor: not-allowed; transform: none;
+        }
+        .nav-info { font-weight: bold; color: #888; font-size: 1.1rem; }
+
+        /* Animations */
+        .shake { animation: shake 0.5s; }
+        @keyframes shake { 0%{transform:translateX(0)} 25%{transform:translateX(-10px)} 75%{transform:translateX(10px)} 100%{transform:translateX(0)} }
+        .pop { animation: pop 0.3s; }
+        @keyframes pop { 50% { transform: scale(1.2); } }
+
+        /* Toast & Admin */
+        #toast {
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 15px 30px; border-radius: 30px; font-size: 1.2rem;
+            z-index: 1000; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        }
+        #admin-panel { background: #f4f4f4; align-items: flex-start; z-index: 200; padding-top: 20px; }
+        .admin-header { width: 100%; display: flex; justify-content: space-between; margin-bottom: 20px; padding-top: 60px; }
+        .admin-content { width: 100%; background: white; padding: 20px; border-radius: 10px; height: 80%; overflow-y: auto; }
+        .vocab-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; align-items: center;}
+        .vocab-thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; margin-right: 15px; }
+
+        /* Mini Games */
+        #game-canvas-area { width: 100%; height: 100%; background: #e0f7fa; border-radius: 10px; overflow: hidden; position: relative; flex: 1; min-height: 300px;}
+        .falling-word { position: absolute; background: white; padding: 5px 10px; border-radius: 10px; border: 2px solid var(--primary); cursor: pointer; font-weight: bold; top: -50px;}
+        .mole-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; height: 100%; padding: 10px; }
+        .mole-hole { background: #8d6e63; border-radius: 50%; position: relative; overflow: hidden; cursor: pointer; }
+        .mole { width: 80%; height: 80%; position: absolute; bottom: -100%; left: 10%; transition: bottom 0.2s; object-fit: contain; }
+        .mole.up { bottom: 0; }
+        .conveyor-belt { position: absolute; bottom: 0; width: 100%; height: 80px; background: #555; display: flex; align-items: center; overflow: hidden;}
+        .conveyor-item { position: absolute; right: -100px; transition: right linear; width: 60px; height: 60px; background: white; padding: 5px; border-radius: 5px;}
+        .drop-zone { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 80px; height: 80px; border: 3px dashed red; pointer-events: none;}
+        .match-container { display: flex; flex-direction: column; height: 100%; width: 100%; }
+        .match-card { width: 80px; height: 80px; background: white; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; }
+        .match-card.selected { border-color: var(--primary); background: #ffe0b2; }
+        .match-card.matched { visibility: hidden; } 
+    </style>
+</head>
+<body>
+
+    <div id="toast">提示訊息</div>
+    
+    <!-- 3. 全域設定按鈕：縮小、無呼吸、加文字 -->
+    <button id="global-setting-btn" onclick="checkAdmin()">
+        <span>⚙️</span> 設定
+    </button>
+
+    <!-- 1. 入口頁 -->
+    <section id="landing" class="screen">
+        <h1>🦁 ABC Fun Challenge</h1>
+        <div style="font-size: 6rem; margin-bottom: 20px;">🏰</div>
+        <button class="btn-large" onclick="goHome()">進入挑戰</button>
+    </section>
+
+    <!-- 2. 主選單 -->
+    <section id="menu" class="screen hidden">
+        <div style="width:100%; text-align: right;"><button class="icon-btn" onclick="showScreen('landing')">🚪</button></div>
+        <div id="menu-container">
+            <h2 class="section-title">📘 學習模式</h2>
+            <div class="grid-menu" id="learning-grid"></div>
+            <h2 class="section-title">🎮 互動遊戲</h2>
+            <div class="grid-menu" id="games-grid"></div>
+        </div>
+    </section>
+
+    <!-- 3. 遊戲/學習區 -->
+    <div id="game-header" class="hidden">
+        <button class="icon-btn" onclick="goHome()">🏠</button>
+        <span id="game-title" style="font-weight: bold; font-size: 1.2rem;">Title</span>
+        <span id="score-board">✨</span>
+    </div>
+
+    <section id="game-area" class="screen hidden">
+        <div class="game-content" id="game-content">
+            <!-- 動態題目 -->
+        </div>
+        
+        <!-- 回饋訊息 -->
+        <div id="feedback-msg"></div>
+
+        <!-- 導航 (將由 JS 動態插入到 game-content 底部) -->
+    </section>
+
+    <!-- 4. 後台管理 -->
+    <section id="admin-panel" class="screen hidden">
+        <div class="admin-header">
+            <!-- 標題改為“設定” -->
+            <h2>設定</h2>
+            <button class="icon-btn" onclick="goHome()">❌</button>
+        </div>
+        <div class="admin-content">
+            <div style="margin-bottom: 20px;">
+                <h3>進度管理</h3>
+                <button onclick="resetProgress()" style="background: #E71D36; color: white; padding: 10px; border-radius: 5px;">⚠️ 重置所有關卡進度</button>
+                <button onclick="unlockAll()" style="background: #2EC4B6; color: white; padding: 10px; border-radius: 5px;">🔓 解鎖全部</button>
+            </div>
+            <hr>
+            <h3>單字庫管理</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="new-word-input" placeholder="單字" style="flex:1; margin:0; padding: 5px;">
+                <input type="text" id="new-word-img" placeholder="圖片網址" style="flex:1; margin:0; padding: 5px;">
+                <button onclick="addWord()" style="background: var(--primary); color: white; padding: 0 15px; border-radius: 5px;">新增</button>
+            </div>
+            <div id="vocab-list"></div>
+        </div>
+    </section>
+
+<script>
+    // --- 資料結構 ---
+    const DEFAULT_VOCAB = [
+        { word: 'apple', img: 'https://cdn-icons-png.flaticon.com/512/415/415733.png' },
+        { word: 'banana', img: 'https://cdn-icons-png.flaticon.com/512/1135/1135543.png' },
+        { word: 'cat', img: 'https://cdn-icons-png.flaticon.com/512/616/616430.png' },
+        { word: 'dog', img: 'https://cdn-icons-png.flaticon.com/512/616/616408.png' },
+        { word: 'elephant', img: 'https://cdn-icons-png.flaticon.com/512/616/616554.png' },
+        { word: 'fish', img: 'https://cdn-icons-png.flaticon.com/512/616/616450.png' }
+    ];
+
+    const LEARNING_MODES = [
+        { id: 'reading', name: '看圖選字', icon: '👀' },
+        { id: 'listening', name: '聽音選字', icon: '👂' },
+        { id: 'spelling', name: '單字填空', icon: '🔤' },
+        { id: 'unscramble', name: '單字重組', icon: '🧩' },
+        { id: 'dictation', name: '聽寫測驗', icon: '📝' }
+    ];
+
+    const GAME_MODES = [
+        { id: 'fallingStars', name: '流星雨', icon: '🌠' },
+        { id: 'whackAMole', name: '打地鼠', icon: '🐹' },
+        { id: 'conveyor', name: '輸送帶', icon: '🏭' },
+        { id: 'matching', name: '圖片配對', icon: '🃏' }
+    ];
+
+    let appState = {
+        vocab: JSON.parse(localStorage.getItem('vocab')) || DEFAULT_VOCAB,
+        progress: JSON.parse(localStorage.getItem('progress')) || {}, 
+        currentMode: null,
+        score: 0
+    };
+
+    // --- 音效與語音 ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        if (type === 'correct') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1000, audioCtx.currentTime + 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+        } else if (type === 'pop') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
+    }
+    function speak(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US'; utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // --- 導航 ---
+    function showScreen(screenId) {
+        window.scrollTo(0, 0); document.body.scrollTop = 0;
+        document.querySelectorAll('.screen').forEach(el => { el.classList.add('hidden'); el.scrollTop = 0; });
+        document.getElementById(screenId).classList.remove('hidden');
+        
+        const header = document.getElementById('game-header');
+        const settingBtn = document.getElementById('global-setting-btn');
+        
+        // 3. 按鈕顯示邏輯：遊戲中 或 後台 -> 隱藏
+        if (screenId === 'game-area' || screenId === 'admin-panel') {
+            header.classList.remove('hidden'); 
+            if(screenId === 'admin-panel') header.classList.add('hidden'); // admin 自帶 header
+            settingBtn.classList.add('hidden'); 
+        } else {
+            header.classList.add('hidden'); 
+            settingBtn.classList.remove('hidden'); 
+        }
+
+        if (screenId === 'menu') renderMenu();
+        if (screenId === 'admin-panel') renderAdminVocab();
+    }
+    function goHome() { showScreen('menu'); stopGameLoops(); document.getElementById('feedback-msg').innerHTML = ''; }
+    function showToast(msg) {
+        const t = document.getElementById('toast'); t.innerText = msg; t.style.opacity = 1;
+        setTimeout(() => t.style.opacity = 0, 2000);
+    }
+    function showFeedback(type) {
+        const el = document.getElementById('feedback-msg');
+        if (type === 'correct') el.innerHTML = '<span class="msg-correct">🎉 答對了！</span>'; 
+        else el.innerHTML = '<span class="msg-wrong">❌ 答錯了！</span>';
+        setTimeout(() => { if(el.innerText.includes('答錯')) el.innerHTML = ''; }, 2000);
+    }
+
+    // --- 選單 ---
+    function renderMenu() {
+        const lGrid = document.getElementById('learning-grid'); lGrid.innerHTML = '';
+        let allCompleted = true;
+        LEARNING_MODES.forEach(mode => {
+            const isDone = appState.progress[mode.id];
+            if (!isDone) allCompleted = false;
+            const card = document.createElement('div');
+            card.className = `mode-card ${isDone ? 'completed' : ''}`;
+            card.innerHTML = `<span class="mode-icon">${mode.icon}</span><span class="mode-name">${mode.name}</span>`;
+            card.onclick = () => startGame(mode.id);
+            lGrid.appendChild(card);
+        });
+        const gGrid = document.getElementById('games-grid'); gGrid.innerHTML = '';
+        GAME_MODES.forEach(game => {
+            const card = document.createElement('div');
+            const unlocked = allCompleted; 
+            card.className = `mode-card ${unlocked ? 'unlocked' : 'locked'}`;
+            card.innerHTML = `<span class="mode-icon">${game.icon}</span><span class="mode-name">${game.name}</span>${unlocked ? '' : '<br><small>🔒 鎖定</small>'}`;
+            if (unlocked) card.onclick = () => startGame(game.id, true);
+            gGrid.appendChild(card);
+        });
+    }
+
+    // --- 遊戲引擎核心 ---
+    let currentQuestionIndex = 0;
+    let currentQuestions = [];
+    let gameInterval = null;
+
+    function startGame(modeId, isMiniGame = false) {
+        appState.currentMode = modeId;
+        currentQuestionIndex = 0;
+        document.getElementById('game-title').innerText = isMiniGame ? GAME_MODES.find(m=>m.id===modeId).name : LEARNING_MODES.find(m=>m.id===modeId).name;
+        document.getElementById('score-board').innerText = ''; 
+        document.getElementById('feedback-msg').innerHTML = '';
+        showScreen('game-area');
+        
+        currentQuestions = [...appState.vocab].sort(() => 0.5 - Math.random());
+
+        if (isMiniGame) {
+            startMiniGame(modeId);
+        } else {
+            renderQuestion();
+        }
+    }
+
+    function navQuestion(delta) {
+        const newIndex = currentQuestionIndex + delta;
+        if (newIndex >= currentQuestions.length) {
+            showCompletionScreen();
+            return;
+        }
+        if (newIndex >= 0 && newIndex < currentQuestions.length) {
+            currentQuestionIndex = newIndex;
+            renderQuestion();
+        }
+    }
+
+    function showCompletionScreen() {
+        appState.progress[appState.currentMode] = true;
+        localStorage.setItem('progress', JSON.stringify(appState.progress));
+        playSound('correct');
+        const container = document.getElementById('game-content');
+        container.innerHTML = `
+            <div style="text-align:center; padding: 20px;">
+                <h1 style="font-size:3rem; margin-bottom:10px;">🏆</h1>
+                <h2>恭喜完成！(Completed!)</h2>
+                <p>是否要再挑戰一輪？</p>
+                <button class="btn-large" onclick="startGame('${appState.currentMode}')">🔄 再玩一輪</button>
+                <button class="btn-large" onclick="goHome()" style="background:#888;">🏠 回主選單</button>
+            </div>
+        `;
+        document.getElementById('feedback-msg').innerHTML = '';
+    }
+
+    function renderQuestion() {
+        document.getElementById('game-area').scrollTop = 0;
+        document.getElementById('feedback-msg').innerHTML = '';
+
+        const q = currentQuestions[currentQuestionIndex];
+        const mode = appState.currentMode;
+        const container = document.getElementById('game-content');
+        container.innerHTML = '';
+
+        // 產生導航 HTML
+        const navHtml = `
+            <div class="nav-wrapper">
+                <button class="nav-btn-cute" onclick="navQuestion(-1)" ${currentQuestionIndex===0 ? 'disabled' : ''}>上一題</button>
+                <span class="nav-info">${currentQuestionIndex + 1} / ${currentQuestions.length}</span>
+                <button class="nav-btn-cute" onclick="navQuestion(1)">${currentQuestionIndex === currentQuestions.length - 1 ? '完成' : '下一題'}</button>
+            </div>
+        `;
+
+        let contentHtml = '';
+
+        if (mode === 'reading') { 
+            contentHtml = `<img src="${q.img}" class="question-img"><div class="options-grid" id="opts"></div>`;
+        } 
+        else if (mode === 'listening') { 
+            contentHtml = `<button class="btn-large" onclick="speak('${q.word}')" style="margin-bottom:15px;">🔊 播放聲音</button><div class="options-grid" id="opts"></div>`;
+        }
+        else if (mode === 'spelling') { 
+            // 這裡交給 renderSpellingOrDictation 處理 DOM，這裡只負責結構
+        }
+        else if (mode === 'unscramble') {
+            // 交給 renderUnscramble
+        }
+        else if (mode === 'dictation') { 
+            // 交給 renderSpellingOrDictation
+        }
+
+        // 插入基礎結構
+        if (mode !== 'spelling' && mode !== 'dictation' && mode !== 'unscramble') {
+            container.innerHTML = contentHtml + navHtml;
+        }
+
+        // 後處理 (綁定事件)
+        if (mode === 'reading') {
+            const opts = generateOptions(q.word, 'word');
+            opts.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(opt, q.word, btn);
+                document.getElementById('opts').appendChild(btn);
+            });
+        }
+        else if (mode === 'listening') {
+            const opts = generateOptions(q.word, 'img');
+            opts.forEach(optWord => {
+                const wObj = appState.vocab.find(v => v.word === optWord);
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `<img src="${wObj.img}">`;
+                btn.onclick = () => checkAnswer(optWord, q.word, btn);
+                document.getElementById('opts').appendChild(btn);
+            });
+            setTimeout(() => speak(q.word), 500);
+        }
+        else if (mode === 'spelling' || mode === 'dictation') {
+            renderSpellingOrDictation(q, container, mode === 'dictation', navHtml);
+        }
+        else if (mode === 'unscramble') {
+            renderUnscramble(q, container, navHtml);
+        }
+    }
+
+    // --- Spelling / Dictation (亂亂字母池) ---
+    function renderSpellingOrDictation(q, container, isDictation, navHtml) {
+        const word = q.word;
+        const len = word.length;
+        
+        const blankCount = Math.ceil(len / 2);
+        let indices = Array.from({length: len}, (_, i) => i);
+        indices.sort(() => 0.5 - Math.random());
+        const blankIndices = indices.slice(0, blankCount);
+
+        let poolLetters = [];
+        blankIndices.forEach(idx => poolLetters.push({char: word[idx], id: 'correct-'+idx}));
+        while(poolLetters.length < blankCount * 2) {
+            const randomChar = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+            poolLetters.push({char: randomChar, id: 'rand-'+Math.random()});
+        }
+        // 不需要 sort，因為我們後面會用絕對定位隨機擺放
+
+        let html = `
+            <img src="${q.img}" class="question-img ${isDictation ? 'img-blur' : ''}" id="q-img">
+            ${isDictation ? `<button class="icon-btn" onclick="speak('${word}')">🔊 播放</button>` : ''}
+            <div class="spelling-board">
+                <div class="slots-container" id="slots"></div>
+                <!-- 亂亂的字母池 -->
+                <div class="pool-container" id="pool"></div>
+                <div style="color:#666; font-size:0.9rem; margin-top:5px;">點擊字母填入空格</div>
+            </div>
+            ${navHtml}
+        `;
+        container.innerHTML = html;
+
+        if(isDictation) speak(word);
+
+        const slotsDiv = document.getElementById('slots');
+        const poolDiv = document.getElementById('pool');
+        let slotState = []; 
+
+        for(let i=0; i<len; i++) {
+            const slotEl = document.createElement('div');
+            if (blankIndices.includes(i)) {
+                slotEl.className = 'slot';
+                slotEl.dataset.idx = i;
+                slotState[i] = { type: 'blank', val: null, el: slotEl };
+                slotEl.onclick = () => handleSlotClick(i);
+            } else {
+                slotEl.className = 'slot static';
+                slotEl.innerText = word[i];
+                slotState[i] = { type: 'static', val: word[i] };
+            }
+            slotsDiv.appendChild(slotEl);
+        }
+
+        // 產生散落的字母
+        poolLetters.forEach((item) => {
+            const pEl = document.createElement('div');
+            pEl.className = 'pool-letter';
+            pEl.innerText = item.char;
+            
+            // 隨機位置計算 (Absolute)
+            // 容器高度 250px, 寬度 100%
+            // 字母大小 50px
+            // 限制 left: 5% ~ 85%, top: 5% ~ 80% 避免超出
+            const rLeft = 5 + Math.random() * 80;
+            const rTop = 5 + Math.random() * 75;
+            const rRot = (Math.random() - 0.5) * 60; // -30 ~ 30 deg
+
+            pEl.style.left = rLeft + '%';
+            pEl.style.top = rTop + '%';
+            pEl.style.transform = `rotate(${rRot}deg)`;
+
+            pEl.onclick = () => {
+                const emptyIdx = slotState.findIndex(s => s.type === 'blank' && s.val === null);
+                if (emptyIdx === -1) return;
+                
+                const slot = slotState[emptyIdx];
+                slot.val = { ...item, pEl: pEl }; 
+                slot.el.innerText = item.char;
+                slot.el.classList.add('filled');
+                pEl.classList.add('used'); // 隱藏
+                checkFull();
+            };
+            poolDiv.appendChild(pEl);
+        });
+
+        window.currentSlotClick = (idx) => {
+             const slot = slotState[idx];
+             if(!slot || slot.val === null) return;
+             slot.val.pEl.classList.remove('used'); // 恢復顯示
+             slot.val = null;
+             slot.el.innerText = '';
+             slot.el.classList.remove('filled');
+             slot.el.classList.remove('correct');
+        };
+
+        function handleSlotClick(idx) {
+            window.currentSlotClick(idx);
+        }
+
+        function checkFull() {
+            const isFull = slotState.every(s => s.type === 'static' || s.val !== null);
+            if (!isFull) return;
+            const userWord = slotState.map(s => s.type === 'static' ? s.val : s.val.char).join('');
+            if (userWord === word) {
+                slotState.forEach(s => { if(s.type==='blank') s.el.classList.add('correct'); });
+                if(isDictation) document.getElementById('q-img').classList.remove('img-blur');
+                handleCorrect();
+            } else {
+                playSound('wrong'); showFeedback('wrong');
+                slotsDiv.classList.add('shake'); setTimeout(() => slotsDiv.classList.remove('shake'), 500);
+            }
+        }
+    }
+
+    // --- Unscramble (重組) ---
+    function renderUnscramble(q, container, navHtml) {
+        const scrambled = q.word.split('').sort(() => 0.5 - Math.random());
+        let currentInput = [];
+        
+        container.innerHTML = `
+            <img src="${q.img}" class="question-img">
+            <div id="target-box" style="height: 60px; border-bottom: 2px solid #ccc; width: 90%; display: flex; justify-content: center; gap: 5px; margin-bottom: 20px; font-size: 2rem; font-weight:bold; min-height: 60px;"></div>
+            <!-- 重組也可以用 pool-container 稍微亂一點，但這裡先維持整齊的 flex，若要亂可改 -->
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;" id="source-box"></div>
+            <button class="icon-btn" onclick="renderQuestion()" style="align-self: flex-end;">🔄</button>
+            ${navHtml}
+        `;
+
+        const renderTiles = () => {
+            const tBox = document.getElementById('target-box');
+            const sBox = document.getElementById('source-box');
+            tBox.innerHTML = ''; sBox.innerHTML = '';
+            
+            currentInput.forEach((l, idx) => {
+                const d = document.createElement('div'); d.className = 'pool-letter'; d.style.position='static'; d.innerText = l;
+                d.onclick = () => { currentInput.splice(idx, 1); scrambled.push(l); renderTiles(); };
+                tBox.appendChild(d);
+            });
+            
+            scrambled.forEach((l, idx) => {
+                const d = document.createElement('div'); d.className = 'pool-letter'; d.style.position='static'; d.innerText = l;
+                d.onclick = () => { scrambled.splice(idx, 1); currentInput.push(l); renderTiles(); checkComplete(); };
+                sBox.appendChild(d);
+            });
+        };
+
+        const checkComplete = () => {
+            if (scrambled.length === 0) {
+                if (currentInput.join('') === q.word) handleCorrect();
+                else { playSound('wrong'); showFeedback('wrong'); document.getElementById('target-box').classList.add('shake'); setTimeout(()=>document.getElementById('target-box').classList.remove('shake'), 500); }
+            }
+        };
+        renderTiles();
+    }
+
+    // --- 輔助邏輯 ---
+    function generateOptions(correctAnswer, type) {
+        let options = [correctAnswer];
+        while (options.length < 4) {
+            const random = appState.vocab[Math.floor(Math.random() * appState.vocab.length)].word;
+            if (!options.includes(random)) options.push(random);
+        }
+        return options.sort(() => 0.5 - Math.random());
+    }
+
+    function checkAnswer(selected, correct, btnElement) {
+        if (selected === correct) {
+            btnElement.style.background = '#d4edda';
+            handleCorrect();
+        } else {
+            playSound('wrong'); showFeedback('wrong');
+            btnElement.classList.add('shake'); btnElement.style.background = '#f8d7da';
+            setTimeout(() => btnElement.classList.remove('shake'), 500);
+        }
+    }
+
+    function handleCorrect() {
+        playSound('correct'); showFeedback('correct');
+        setTimeout(() => { navQuestion(1); }, 1500);
+    }
+
+    // --- 後台管理 ---
+    function checkAdmin() {
+        const pwd = prompt("請輸入管理員密碼 (預設: 0000)");
+        if (pwd === "0000") showScreen('admin-panel'); else alert("密碼錯誤");
+    }
+    function renderAdminVocab() {
+        const list = document.getElementById('vocab-list'); list.innerHTML = '';
+        appState.vocab.forEach((v, idx) => {
+            const div = document.createElement('div'); div.className = 'vocab-item';
+            div.innerHTML = `<div style="display:flex;align-items:center;"><img src="${v.img}" class="vocab-thumb"><b>${v.word}</b></div><button onclick="deleteWord(${idx})" style="color:red;font-size:1.2rem;">🗑️</button>`;
+            list.appendChild(div);
+        });
+    }
+    async function addWord() {
+        const wInput = document.getElementById('new-word-input'); const iInput = document.getElementById('new-word-img');
+        const word = wInput.value.trim().toLowerCase(); let img = iInput.value.trim();
+        if (!word) return;
+        if (!img) img = 'https://via.placeholder.com/150?text=' + word;
+        appState.vocab.push({ word, img });
+        localStorage.setItem('vocab', JSON.stringify(appState.vocab));
+        wInput.value = ''; iInput.value = ''; renderAdminVocab(); showToast('新增成功！');
+    }
+    function deleteWord(idx) {
+        if(confirm("確定刪除？")) {
+            appState.vocab.splice(idx, 1); localStorage.setItem('vocab', JSON.stringify(appState.vocab)); renderAdminVocab();
+        }
+    }
+    function resetProgress() {
+        if(confirm("確定重置所有闖關進度？")) {
+            appState.progress = {}; localStorage.setItem('progress', JSON.stringify(appState.progress)); showToast('進度已重置');
+        }
+    }
+    function unlockAll() {
+        LEARNING_MODES.forEach(m => appState.progress[m.id] = true);
+        localStorage.setItem('progress', JSON.stringify(appState.progress)); showToast('全解鎖 God Mode!');
+    }
+
+    // --- 迷你遊戲 (無導航條) ---
+    function stopGameLoops() { if (gameInterval) clearInterval(gameInterval); document.getElementById('game-content').innerHTML = ''; }
+    function startMiniGame(id) {
+        const container = document.getElementById('game-content');
+        container.innerHTML = `<div id="game-canvas-area"></div>`;
+        const area = document.getElementById('game-canvas-area');
+        let score = 0; let lives = 3;
+        const updateScore = () => document.getElementById('score-board').innerText = `⭐ ${score} | ❤️ ${lives}`;
+        updateScore();
+        const gameOver = (win) => {
+            stopGameLoops();
+            area.innerHTML = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2rem;font-weight:bold;text-align:center;">${win?'You Win!':'Game Over'}<br><button class="btn-large" onclick="startGame('${id}', true)" style="margin-top:20px;font-size:1rem;">重玩</button><br><button class="btn-large" onclick="goHome()" style="background:#888;font-size:1rem;">回選單</button></div>`;
+        };
+        const handleWrongInGame = (el) => {
+            playSound('wrong'); showFeedback('wrong'); lives--;
+            if(el) el.style.background = 'red'; updateScore(); if(lives <= 0) gameOver(false);
+        };
+
+        if (id === 'fallingStars') {
+            let currentTarget = appState.vocab[Math.floor(Math.random() * appState.vocab.length)];
+            const qDiv = document.createElement('div');
+            qDiv.innerHTML = `<img src="${currentTarget.img}" style="width:50px; height:50px;"> 找: ${currentTarget.word}`;
+            qDiv.style.cssText = "position:absolute; top:5px; left:5px; background:white; padding:5px; z-index:2;";
+            area.appendChild(qDiv);
+            gameInterval = setInterval(() => {
+                const wordObj = appState.vocab[Math.floor(Math.random() * appState.vocab.length)];
+                const el = document.createElement('div'); el.className = 'falling-word'; el.innerText = wordObj.word;
+                el.style.left = Math.random() * (area.offsetWidth - 60) + 'px';
+                el.onclick = () => {
+                    if(wordObj.word === currentTarget.word) { playSound('pop'); score++; el.remove(); showFeedback('correct'); currentTarget = appState.vocab[Math.floor(Math.random() * appState.vocab.length)]; qDiv.innerHTML = `<img src="${currentTarget.img}" style="width:50px; height:50px;"> 找: ${currentTarget.word}`; } 
+                    else { handleWrongInGame(el); } updateScore();
+                };
+                area.appendChild(el);
+                let top = -30; const fall = setInterval(() => { top += 2; el.style.top = top + 'px'; if (top > 400) { clearInterval(fall); el.remove(); } }, 20);
+            }, 1500);
+        } else if (id === 'whackAMole') {
+            area.innerHTML = `<div class="mole-grid" id="mole-grid"></div>`; const grid = document.getElementById('mole-grid');
+            let holes = []; for(let i=0; i<9; i++) { const h = document.createElement('div'); h.className = 'mole-hole'; const m = document.createElement('img'); m.className = 'mole'; h.appendChild(m); grid.appendChild(h); holes.push({hole: h, mole: m}); }
+            let targetWord = ''; const hint = document.createElement('div'); hint.style.cssText = "position:absolute; top:0; background:rgba(255,255,255,0.8); width:100%; text-align:center; padding:5px; font-weight:bold;"; area.appendChild(hint);
+            gameInterval = setInterval(() => {
+                const targetObj = appState.vocab[Math.floor(Math.random() * appState.vocab.length)]; targetWord = targetObj.word; hint.innerText = `打擊: ${targetWord}`; speak(targetWord);
+                const idx = Math.floor(Math.random() * 9); const {mole} = holes[idx]; mole.src = targetObj.img; mole.classList.add('up');
+                mole.onclick = () => { playSound('pop'); score++; showFeedback('correct'); updateScore(); mole.classList.remove('up'); };
+                const fakeIdx = (idx + 1) % 9; const fakeObj = appState.vocab.find(v => v.word !== targetWord);
+                if(fakeObj){ holes[fakeIdx].mole.src = fakeObj.img; holes[fakeIdx].mole.classList.add('up'); holes[fakeIdx].mole.onclick = () => { handleWrongInGame(null); holes[fakeIdx].mole.classList.remove('up'); }; setTimeout(() => holes[fakeIdx].mole.classList.remove('up'), 1000); }
+                setTimeout(() => mole.classList.remove('up'), 1200);
+            }, 2000);
+        } else if (id === 'conveyor') {
+            area.innerHTML = `<div class="drop-zone"></div><div class="conveyor-belt" id="belt"></div>`; const belt = document.getElementById('belt');
+            const targetObj = appState.vocab[Math.floor(Math.random() * appState.vocab.length)]; const hint = document.createElement('div'); hint.innerHTML = `收集: <img src="${targetObj.img}" width="30"> <b>${targetObj.word}</b>`; hint.style.cssText = "position:absolute;top:10px;left:10px;background:white;padding:5px;"; area.appendChild(hint);
+            gameInterval = setInterval(() => {
+                const itemObj = appState.vocab[Math.floor(Math.random() * appState.vocab.length)]; const el = document.createElement('div'); el.className = 'conveyor-item'; el.innerHTML = `<img src="${itemObj.img}" width="100%">`; belt.appendChild(el);
+                let right = -60; const move = setInterval(() => { right += 2; el.style.right = right + 'px'; const centerPos = area.offsetWidth / 2; const itemPos = area.offsetWidth - right - 30;
+                    el.onclick = () => { if (Math.abs(itemPos - centerPos) < 50) { if (itemObj.word === targetObj.word) { playSound('pop'); score++; el.remove(); clearInterval(move); showFeedback('correct'); } else { handleWrongInGame(el); } updateScore(); } };
+                    if (right > area.offsetWidth) { clearInterval(move); el.remove(); } }, 16);
+            }, 1500);
+        } else if (id === 'matching') {
+            area.innerHTML = `<div class="match-container" id="match-box"></div>`; const box = document.getElementById('match-box');
+            const subset = appState.vocab.slice(0, 3); const words = subset.map(v => ({type: 'word', val: v.word, id: v.word})); const imgs = subset.map(v => ({type: 'img', val: v.img, id: v.word}));
+            const allItems = [...words, ...imgs].sort(()=>0.5-Math.random()); let selected = null; let matchedCount = 0;
+            allItems.forEach(item => {
+                const card = document.createElement('div'); card.className = 'match-card'; card.innerHTML = item.type === 'word' ? item.val : `<img src="${item.val}" style="width:60px">`;
+                card.onclick = () => { playSound('pop'); if (item.type === 'word') speak(item.val);
+                    if (!selected) { selected = { el: card, item: item }; card.classList.add('selected'); } else {
+                        if (selected.item.id === item.id && selected.item.type !== item.type) { playSound('correct'); showFeedback('correct'); card.classList.add('matched'); selected.el.classList.add('matched'); matchedCount++; if (matchedCount === 3) setTimeout(() => { score+=10; updateScore(); gameOver(true); }, 500); } 
+                        else { handleWrongInGame(null); card.classList.add('shake'); selected.el.classList.add('shake'); setTimeout(()=>{ card.classList.remove('shake'); selected.el.classList.remove('shake'); }, 500); }
+                        selected.el.classList.remove('selected'); selected = null; } }; box.appendChild(card); });
+            box.style.cssText = "display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; padding:20px;";
+        }
+    }
+</script>
+</body>
+</html>
